@@ -118,7 +118,7 @@ class ProfileScreen extends ConsumerWidget {
                           .read(themeProvider.notifier)
                           .setTheme(val ? ThemeMode.dark : ThemeMode.light);
                     },
-                    activeColor: scheme.primary,
+                    activeThumbColor: scheme.primary,
                   ),
                 ),
                 _SettingsTile(
@@ -133,7 +133,7 @@ class ProfileScreen extends ConsumerWidget {
                           .read(themeProvider.notifier)
                           .setTheme(val ? ThemeMode.system : ThemeMode.dark);
                     },
-                    activeColor: scheme.primary,
+                    activeThumbColor: scheme.primary,
                   ),
                 ),
               ],

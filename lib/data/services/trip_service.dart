@@ -1,4 +1,5 @@
 import 'package:driver_app_saferide/data/models/trip_model.dart';
+import 'package:flutter/rendering.dart';
 
 class TripService {
   Future<TripModel> getAssignedTrip( int driverId) async{
@@ -59,7 +60,7 @@ class TripService {
   })async{
     await Future.delayed(Duration(milliseconds: 300));
      // Real: POST /trips/:id/attendance
-     print('📋 Marked $studentId as $status at $stopName');
+    //  print('📋 Marked $studentId as $status at $stopName');
   }
 Future<void> broadcastLocation({
   required int tripId,
@@ -68,7 +69,8 @@ Future<void> broadcastLocation({
 
 })async{
   // Real: emit via Socket.IO
-  print('Broadcasting:$lat, $lng');
+  debugPrint('Broadcasting:$lat, $lng');
+  return ;
 }
   
 }

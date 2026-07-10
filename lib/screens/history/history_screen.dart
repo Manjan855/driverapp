@@ -2,6 +2,8 @@ import 'package:driver_app_saferide/core/theme/app_typography.dart';
 import 'package:driver_app_saferide/data/models/trip_history_model.dart';
 import 'package:driver_app_saferide/providers/auth_provider.dart';
 import 'package:driver_app_saferide/providers/trip_history_provider.dart';
+import 'package:driver_app_saferide/widgets/shimmer_box.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -32,38 +34,98 @@ class HistoryScreen extends ConsumerWidget {
               ),
             );
           }
-          final totalTrips = trips.length;
-          final completedTrips = trips
-              .where((t) => t.status == 'completed')
-              .length;
-          final totalStudents = trips.fold<int>(
-            0,
-            (sum, t) => sum + t.boardedCount,
-          );
+         
+         
           return Column(
             children: [
               //summary stat
-              Container(margin: EdgeInsets.all(16),
-              padding: EdgeInsets.all(16),
-               decoration: BoxDecoration(
+              Container(
+                margin: EdgeInsets.all(16),
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
                   color: scheme.surface,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [],
+                  children: [
+                    ShimmerBox(
+                      width: 60,
+                      height: 40,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    ShimmerBox(
+                      width: 60,
+                      height: 40,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    ShimmerBox(
+                      width: 60,
+                      height: 40,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                   
+                  ],
                 ),
               ),
               //trip list
-              Expanded(child: ListView.builder(
-                padding: EdgeInsets.fromLTRB(16, 0, 16, 20),
-                itemCount: trips.length,
-                itemBuilder: (context,index){
-                  final trip = trips[index];
-                  return Padding(padding: 
-                  EdgeInsets.only(bottom: 8),
-                  child: _,)
-                }))
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+
+                  itemCount: trips.length,
+                  itemBuilder: (_, _) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: scheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              ShimmerBox(
+                                width: 44,
+                                height: 36,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ShimmerBox(
+                                      width: 140,
+                                      height: 13,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    ShimmerBox(
+                                      width: 90,
+                                      height: 11,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              ShimmerBox(
+                                width: 70,
+                                height: 22,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                
+                ),
+              ),
             ],
           );
         },
@@ -81,25 +143,19 @@ class HistoryScreen extends ConsumerWidget {
     );
   }
 }
+
 class _Stat extends StatelessWidget {
   final String label;
   final String value;
   final ColorScheme scheme;
-   const _Stat({
-    required this.label,
-    required this.value,
-    required this.scheme,
-  });
-   @override
+  const _Stat({required this.label, required this.value, required this.scheme});
+  @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         Text(
           value,
-          style: AppTypography.display(
-            color: scheme.onSurface,
-            size: 22,
-          ),
+          style: AppTypography.display(color: scheme.onSurface, size: 22),
         ),
         const SizedBox(height: 4),
         Text(
@@ -114,20 +170,18 @@ class _Stat extends StatelessWidget {
     );
   }
 }
+
 class _TripHistoryCard extends StatelessWidget {
   final TripHistoryModel trip;
   final ColorScheme scheme;
-  _TripHistoryCard({
-    required this.scheme,
-    required this.trip
-  });
+  const _TripHistoryCard({required this.scheme, required this.trip});
   @override
   Widget build(BuildContext context) {
-   final isCancelled = trip.status == 'Cancelled';
-   final statusColor = isCancelled ? scheme.error : scheme.secondary;
+    final isCancelled = trip.status == 'Cancelled';
+    final statusColor = isCancelled ? scheme.error : scheme.secondary;
 
-   return Container(
-     padding: const EdgeInsets.all(14),
+    return Container(
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: scheme.surface,
         borderRadius: BorderRadius.circular(12),
@@ -140,11 +194,14 @@ class _TripHistoryCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(DateFormat('EEE').format(trip.date),  style: AppTypography.mono(
+                  Text(
+                    DateFormat('EEE').format(trip.date),
+                    style: AppTypography.mono(
                       color: scheme.onSurface.withValues(alpha: 0.4),
                       size: 10,
-                    ),),
-                   Text(
+                    ),
+                  ),
+                  Text(
                     DateFormat('MMM d').format(trip.date),
                     style: AppTypography.heading(
                       color: scheme.onSurface,
@@ -153,24 +210,33 @@ class _TripHistoryCard extends StatelessWidget {
                   ),
                 ],
               ),
-                const SizedBox(width: 14),
-                //route info
-                Expanded(child: Column(
+              const SizedBox(width: 14),
+              //route info
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                  Text(trip.routeName, style: AppTypography.body(
+                    Text(
+                      trip.routeName,
+                      style: AppTypography.body(
                         color: scheme.onSurface,
                         size: 13,
-                      ),),
-                      const SizedBox(height: 2),
-                      Text( "${trip.departureTime} -> ${trip.arrivalTime}", style: AppTypography.mono(
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "${trip.departureTime} -> ${trip.arrivalTime}",
+                      style: AppTypography.mono(
                         color: scheme.onSurface.withValues(alpha: 0.4),
                         size: 11,
-                      ),)
-                ],)),
-                // Status badge
-                Container(
-                    padding: const EdgeInsets.symmetric(
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Status badge
+              Container(
+                padding: const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 4,
                 ),
@@ -178,43 +244,67 @@ class _TripHistoryCard extends StatelessWidget {
                   color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(isCancelled ? 'Cancelled': 'Completed',  style: AppTypography.mono(
-                    color: statusColor,
-                    size: 10,
-                  ),),
-                )
+                child: Text(
+                  isCancelled ? 'Cancelled' : 'Completed',
+                  style: AppTypography.mono(color: statusColor, size: 10),
+                ),
+              ),
             ],
-
           ),
-          if(!isCancelled)...[
-            SizedBox(height:10),
+          if (!isCancelled) ...[
+            SizedBox(height: 10),
             Container(
               height: 0.5,
               color: scheme.outline.withValues(alpha: 0.15),
             ),
-            SizedBox(height: 10,),
+            SizedBox(height: 10),
             //attendance row
-            Row(children: [
-            Icon(Icons.person_outline, size: 14, color: scheme.onSurface.withValues(alpha: 0.3),),
-            SizedBox( height: 6,),
-            Text('${trip.boardedCount}/${trip.totalStudents}boarded',style: AppTypography.caption(color: scheme.onSurface.withValues(alpha: 0.5),size: 12),),
-            Spacer()
-            //mini attendace bar
-            SizedBox( height: 80,
-            width: 4,
-            child: ClipRRect(
-             borderRadius: BorderRadius.circular(14), 
-              child: LinearProgressIndicator(
-                value: trip.attendanceRate,
-                backgroundColor: scheme.onSurface.withValues(alpha:  0.08),
-                color: trip.attendanceRate == 1.0 ? scheme.secondary : scheme.primary
-              ),
-              ,
-            ),)
-            ],)
-          ]
+            Row(
+              children: [
+                Icon(
+                  Icons.person_outline,
+                  size: 14,
+                  color: scheme.onSurface.withValues(alpha: 0.3),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  '${trip.boardedCount}/${trip.totalStudents}boarded',
+                  style: AppTypography.caption(
+                    color: scheme.onSurface.withValues(alpha: 0.5),
+                    size: 12,
+                  ),
+                ),
+                Spacer(),
+                //mini attendace bar
+                SizedBox(
+                  height: 80,
+                  width: 4,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: LinearProgressIndicator(
+                      value: trip.attendanceRate,
+                      backgroundColor: scheme.onSurface.withValues(alpha: 0.08),
+                      color: trip.attendanceRate == 1.0
+                          ? scheme.secondary
+                          : scheme.primary,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  '${(trip.attendanceRate * 100).round()}%',
+                  style: AppTypography.mono(
+                    color: trip.attendanceRate == 1.0
+                        ? scheme.secondary
+                        : scheme.primary,
+                    size: 11,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
-   );
+    );
   }
 }

@@ -1,7 +1,11 @@
 import 'dart:math';
 
 import 'package:driver_app_saferide/core/theme/app_typography.dart';
+import 'package:driver_app_saferide/data/models/trip_model.dart';
+import 'package:driver_app_saferide/data/models/trip_state_model.dart';
 import 'package:driver_app_saferide/providers/auth_provider.dart';
+import 'package:driver_app_saferide/providers/trip_provider.dart';
+
 import 'package:driver_app_saferide/widgets/send_alert_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,19 +17,27 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final authState = ref.watch(authProvider);
-    // final driverName = authState.driver?.name.split(' ').first ?? 'Driver';
-    // Mock trip data — real data comes from backend in later 
-    const totalStops = 5;
-    const completedStops = 2;
-    const tripActive = true;
+    final driverName = authState.driver?.name.split(' ').first ?? 'Driver';
+    // Mock trip data — real data comes from backend in later
+    final tripState = ref.watch(tripProvider);
+    final trip = tripState.activeTripModel!;
+    final totalStops = trip?.stops.length ?? 0;
+    final completedStops = tripState.currentStopIndex;
+    final tripActive = tripState.screenState == TripScreenState.active;
+    final nextStop = trip != null && tripActive
+        ? trip.stops[tripState.currentStopIndex].stopName
+        : 'No active Tripe';
+    final nextStopEta = tripActive ? '- min' : '-';
+
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
             // ── Instrument bar — always visible, never scrolls ──
             _InstrumentBar(
-              busNumber: 'BA 2 KHA 4521',
-              routeName: 'Baneshwor → Koteshwor',
+              driverName: driverName,
+              busNumber: trip?.busNumber ?? 'BA 2 KHA 4521',
+              routeName: trip?.routeName ?? 'Baneshwor → Koteshwor',
 
               isActive: tripActive,
               scheme: scheme,
@@ -38,19 +50,23 @@ class HomeScreen extends ConsumerWidget {
                 child: Column(
                   children: [
                     // Next stop card
-                    _NextStopCard(scheme: scheme),
+                    _NextStopCard(
+                      scheme: scheme,
+                      stopName: nextStop,
+                      eta: nextStopEta,
+                    ),
                     const SizedBox(height: 12),
 
                     // Progress ring + student list
                     _ProgressRingSection(
                       completed: completedStops,
-                      total: totalStops,
+                      total: totalStops > 0 ? totalStops : 1,
                       scheme: scheme,
                     ),
                     SizedBox(height: 12),
 
                     // Student list
-                    _StudentListCard(scheme: scheme),
+                    _StudentListCard(scheme: scheme, tripState: tripState),
                   ],
                 ),
               ),
@@ -64,6 +80,7 @@ class HomeScreen extends ConsumerWidget {
 
 // Instrument bar//
 class _InstrumentBar extends StatelessWidget {
+  final String driverName;
   final String busNumber;
   final String routeName;
   final bool isActive;
@@ -74,6 +91,7 @@ class _InstrumentBar extends StatelessWidget {
     required this.routeName,
     required this.isActive,
     required this.scheme,
+    required this.driverName,
   });
   @override
   Widget build(BuildContext context) {
@@ -122,6 +140,14 @@ class _InstrumentBar extends StatelessWidget {
                 ),
               ),
               Spacer(),
+
+              Text(
+                driverName,
+                style: AppTypography.mono(
+                  color: scheme.onSurface.withValues(alpha: 0.4),
+                  size: 11,
+                ),
+              ),
               Text(
                 TimeOfDay.now().format(context),
                 style: AppTypography.mono(
@@ -179,8 +205,14 @@ class _InstrumentBar extends StatelessWidget {
 
 //Next stop card
 class _NextStopCard extends StatelessWidget {
+  final String eta;
+  final String stopName;
   final ColorScheme scheme;
-  const _NextStopCard({required this.scheme});
+  const _NextStopCard({
+    required this.scheme,
+    required this.eta,
+    required this.stopName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -205,7 +237,7 @@ class _NextStopCard extends StatelessWidget {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'New Baneshowr Chowk',
+                  stopName,
                   style: AppTypography.heading(
                     color: scheme.onSurface,
                     size: 15,
@@ -215,7 +247,7 @@ class _NextStopCard extends StatelessWidget {
             ),
           ),
           Text(
-            '2 min',
+            eta,
             style: AppTypography.display(color: scheme.secondary, size: 22),
           ),
         ],
@@ -230,7 +262,7 @@ class _ProgressRingSection extends StatelessWidget {
   final int completed;
   final int total;
   final ColorScheme scheme;
-const  _ProgressRingSection({
+  const _ProgressRingSection({
     required this.completed,
     required this.total,
     required this.scheme,
@@ -337,95 +369,146 @@ class _RingPainter extends CustomPainter {
 // studentListCard
 class _StudentListCard extends StatelessWidget {
   final ColorScheme scheme;
- const _StudentListCard({required this.scheme});
+  final TripStateModel tripState;
+  const _StudentListCard({required this.scheme, required this.tripState});
 
   @override
   Widget build(BuildContext context) {
-    final students = [
-      {'name': 'Arav Sharma', 'initials': 'AS', 'status': 'boarded'},
-      {'name': 'Priya Thapa', 'initials': 'PT', 'status': 'waiting'},
-      {'name': 'Sandip Rai', 'initials': 'SR', 'status': 'absent'},
-    ];
+    final trip = tripState.activeTripModel;
+    final isActive = tripState.screenState == TripScreenState.active;
+
+    if (trip == null) {
+      return Container(
+        padding: EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.directions_bus_outlined,
+              size: 36,
+              color: scheme.onSurface.withValues(alpha: 0.2),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'No active trip',
+              style: AppTypography.heading(
+                color: scheme.onSurface.withValues(alpha: 0.4),
+                size: 14,
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Go to the Trip tab to start your route',
+              style: AppTypography.caption(
+                color: scheme.onSurface.withValues(alpha: 0.3),
+                size: 13,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+    final stops = trip.stops;
+    final index = tripState.currentStopIndex;
+
+    final currentStop = stops[index];
+    if (index >= stops.length) {
+      SizedBox.shrink();
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: scheme.surface,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
-        children: students.asMap().entries.map((entry) {
-          final i = entry.key;
-          final s = entry.value;
-          final isLast = i == students.length - 1;
-          final status = s['status']!;
-
-          Color statusColor;
-          IconData statusIcon;
-          switch (status) {
-            case 'boarded':
-              statusColor = scheme.primary;
-              statusIcon = Icons.check_rounded;
-              break;
-            case 'absent':
-              statusColor = scheme.error;
-              statusIcon = Icons.close_rounded;
-              break;
-            default:
-              statusIcon = Icons.radio_button_unchecked;
-              statusColor = scheme.outline;
-          }
-          return Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              border: isLast
-                  ? null
-                  : Border(
-                      bottom: BorderSide(
-                        color: scheme.outline.withValues(alpha: 0.15),
-                      ),
-                    ),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Text(
+              'At ${currentStop.stopName}',
+              style: AppTypography.heading(
+                color: scheme.onSurface.withValues(alpha: 0.6),
+                size: 13,
+              ),
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: scheme.onSurface.withValues(alpha: 0.15),
-                  ),
-                  child: Center(
-                    child: Text(
-                      s['initials']!,
-                      style: AppTypography.mono(
-                        color: scheme.onSurface.withValues(alpha: 0.5),
-                        size: 12,
+          ),
+          ...currentStop.students.asMap().entries.map((entry) {
+            final i = entry.key;
+            final student = entry.value;
+            final isLast = i == currentStop.students.length - 1;
+            Color statusColor;
+            IconData statusIcon;
+            switch (student.attendance) {
+              case AttendanceStatus.boarded:
+                statusColor = scheme.secondary;
+                statusIcon = Icons.check_rounded;
+                break;
+              case AttendanceStatus.absent:
+                statusColor = scheme.error;
+                statusIcon = Icons.close_rounded;
+                break;
+              default:
+                statusColor = scheme.outline;
+                statusIcon = Icons.radio_button_unchecked;
+            }
+            return Container(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                border: isLast
+                    ? null
+                    : Border(
+                        bottom: BorderSide(
+                          color: scheme.outline.withValues(alpha: 0.1),
+                        ),
+                      ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: scheme.onSurface.withValues(alpha: 0.06),
+                    ),
+                    child: Center(
+                      child: Text(
+                        student.initials,
+                        style: AppTypography.mono(
+                          color: scheme.onSurface.withValues(alpha: 0.5),
+                          size: 12,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    s['name']!,
-                    style: AppTypography.body(color: scheme.onSurface),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      student.name,
+                      style: AppTypography.body(color: scheme.onSurface),
+                    ),
                   ),
-                ),
-                GestureDetector(
-                  onTap: () {},
-                  child: Container(
-                    width: 36,
-                    height: 36,
+                  Container(
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: statusColor.withValues(alpha: 0.12),
                     ),
-                    child: Icon(statusIcon, color: statusColor, size: 18),
+                    child: Icon(statusIcon, color: statusColor, size: 16),
                   ),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 4),
+        ],
       ),
     );
   }

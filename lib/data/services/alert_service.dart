@@ -8,7 +8,7 @@ class AlertService {
   }) async {
     await Future.delayed(Duration(milliseconds: 300));
     // Real: POST /trips/:id/alerts  +  FCM broadcast to all parents
-    print("Alert sent: ${type.name} - $message");
+    // print("Alert sent: ${type.name} - $message");
   }
 
   Future<List<AlertModel>> getsentAlert(int tripId) async {
