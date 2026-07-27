@@ -1,8 +1,11 @@
+import 'dart:ui';
+
 import 'package:driver_app_saferide/core/theme/app_typography.dart';
 import 'package:driver_app_saferide/data/models/trip_model.dart';
 import 'package:driver_app_saferide/data/models/trip_state_model.dart';
 import 'package:driver_app_saferide/providers/auth_provider.dart';
 import 'package:driver_app_saferide/providers/trip_provider.dart';
+import 'package:driver_app_saferide/widgets/route_map_widget.dart';
 import 'package:driver_app_saferide/widgets/send_alert_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -118,10 +121,23 @@ class TripBody extends ConsumerWidget {
                 // Trip info card
                 _TripInfoCard(trip: trip, scheme: scheme),
                 const SizedBox(height: 12),
-
+                RouteMapWidget(
+                  stops: trip.stops,
+                  currentStopIndex: 0,
+                  driverLat: null,
+                  driverLng: null,
+                ),
                 // Current stop + students (only when active)
                 if (isActive && currentStop != null) ...[
                   _CurrentStopCard(stop: currentStop, scheme: scheme),
+
+                  const SizedBox(height: 12),
+                  RouteMapWidget(
+                    stops: trip.stops,
+                    currentStopIndex: tripState.currentStopIndex,
+                    driverLat: tripState.currentLat,
+                    driverLng: tripState.currentLng,
+                  ),
                   const SizedBox(height: 12),
                   _StudentMarkingCard(
                     stop: currentStop,
