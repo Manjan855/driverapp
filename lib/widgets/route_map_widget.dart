@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:driver_app_saferide/screens/trip/full_map_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:maplibre/maplibre.dart';
 import 'package:path_provider/path_provider.dart';
@@ -263,97 +264,111 @@ class _RouteMapWidgetState extends State<RouteMapWidget> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: SizedBox(
-        height: 220,
-        child: Stack(
-          children: [
-            MapLibreMap(
-              options: MapOptions(
-                initCenter: widget.stops.isNotEmpty
-                    ? Geographic(
-                        lon: widget.stops[widget.currentStopIndex].longitude,
-                        lat: widget.stops[widget.currentStopIndex].latitude,
-                      )
-                    : Geographic(
-                        lon: MapConstants.kathmanduLng,
-                        lat: MapConstants.kathmanduLat,
-                      ),
-                initZoom: MapConstants.defaultZoom,
-                initStyle: MapConstants.styleUrl,
-              ),
-              onEvent: (event) {
-                if (event case MapEventMapCreated()) {
-                  _mapController = event.mapController;
-                }
-              },
-              onStyleLoaded: (style) {
-                setState(() => _isMapReady = true);
-                _drawRoute();
-                if (widget.driverLat != null) {
-                  _updateDriverMarker();
-                }
-              },
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => FullMapScreen(
+              stops: widget.stops,
+              currentStopIndex: widget.currentStopIndex,
+              driverLat: widget.driverLat,
+              driverLng: widget.driverLng,
             ),
+            fullscreenDialog: true,
+          ),
+        );
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: SizedBox(
+          height: double.infinity,
+          child: Stack(
+            children: [
+              MapLibreMap(
+                options: MapOptions(
+                  initCenter: widget.stops.isNotEmpty
+                      ? Geographic(
+                          lon: widget.stops[widget.currentStopIndex].longitude,
+                          lat: widget.stops[widget.currentStopIndex].latitude,
+                        )
+                      : Geographic(
+                          lon: MapConstants.kathmanduLng,
+                          lat: MapConstants.kathmanduLat,
+                        ),
+                  initZoom: MapConstants.defaultZoom,
+                  initStyle: MapConstants.styleUrl,
+                ),
+                onMapCreated: (controller) {
+                  _mapController = controller;
+                },
+                // onEvent: (event) {
+                //   if (event case MapEventMapCreated()) {
+                //     _mapController = event.mapController;
+                //   }
+                //},
+                onStyleLoaded: (style) {
+                  setState(() => _isMapReady = true);
+                  _drawRoute();
+                  if (widget.driverLat != null) {
+                    _updateDriverMarker();
+                  }
+                },
+              ),
 
-            // Loading overlay
-            if (!_isMapReady)
-              Container(
-                color: isDark
-                    ? const Color(0xFF141925)
-                    : const Color(0xFFEDEFF3),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Theme.of(context).colorScheme.primary,
+              // Loading overlay
+              if (!_isMapReady)
+                Container(
+                  color: isDark
+                      ? const Color(0xFF141925)
+                      : const Color(0xFFEDEFF3),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                 ),
-              ),
 
-            // Current stop label overlay — top left
-            if (_isMapReady && widget.stops.isNotEmpty)
-              Positioned(
-                top: 10,
-                left: 10,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF141925).withValues(alpha: 0.92)
-                        : Colors.white.withValues(alpha: 0.92),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
+              // Current stop label overlay — top left
+              if (_isMapReady && widget.stops.isNotEmpty)
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF141925).withValues(alpha: 0.92)
+                          : Colors.white.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.fullscreen_rounded,
+                          size: 14,
                           color: Theme.of(context).colorScheme.primary,
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        widget.stops[widget.currentStopIndex].stopName,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: isDark
-                              ? Colors.white
-                              : const Color(0xFF10131A),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Expand',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
