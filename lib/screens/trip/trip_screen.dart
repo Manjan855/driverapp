@@ -105,7 +105,10 @@ class TripBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tripState = ref.watch(tripProvider);
     final scheme = Theme.of(context).colorScheme;
-    final trip = tripState.activeTripModel!;
+    final trip = tripState.activeTripModel;
+    if (trip == null) {
+      return const Center(child: CircularProgressIndicator(strokeWidth: 2.5));
+    }
     final isActive = tripState.screenState == TripScreenState.active;
     final currentStop = isActive
         ? trip.stops[tripState.currentStopIndex]

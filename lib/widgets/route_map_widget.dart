@@ -282,7 +282,7 @@ class _RouteMapWidgetState extends State<RouteMapWidget> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
         child: SizedBox(
-          height: double.infinity,
+          height: 220,
           child: Stack(
             children: [
               MapLibreMap(

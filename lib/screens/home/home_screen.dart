@@ -76,6 +76,7 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
   }
+ 
 }
 
 // Instrument bar//
