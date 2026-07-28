@@ -272,7 +272,7 @@ class _FullMapScreenState extends State<FullMapScreen> {
             onStyleLoaded: (style) {
               setState(() => _isMapReady = true);
               _drawRoute();
-              if (widget.driverLat != null) _addDriverMarker();
+              if (widget.driverLat != null) {_addDriverMarker();}
             },
           ),
 
