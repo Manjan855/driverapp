@@ -1,15 +1,15 @@
 import 'dart:math';
+
+import 'package:driver_app_saferide/core/theme/app_typography.dart';
+import 'package:driver_app_saferide/data/models/trip_model.dart';
+import 'package:driver_app_saferide/data/models/trip_state_model.dart';
+import 'package:driver_app_saferide/providers/auth_provider.dart';
+import 'package:driver_app_saferide/providers/trip_provider.dart';
+
+import 'package:driver_app_saferide/widgets/send_alert_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/theme/app_typography.dart';
-import '../../data/models/trip_model.dart';
-import '../../data/models/trip_state_model.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/trip_provider.dart';
-import '../../widgets/send_alert_sheet.dart';
 
-// CHANGED: ConsumerWidget → ConsumerStatefulWidget
-// so we can load trip data in initState before build runs
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -21,8 +21,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // CHANGED: load trip data immediately on first render
-    // so tripProvider is never null when widgets try to read it
+    // Load trip data as soon as Home screen first renders
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final driverId = ref.read(authProvider).driver?.id ?? 1;
       ref.read(tripProvider.notifier).loadAssignedTrip(driverId);
@@ -32,57 +31,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final authState = ref.watch(authProvider);
-    final driverName = authState.driver?.name.split(' ').first ?? 'Driver';
-
     final tripState = ref.watch(tripProvider);
     final trip = tripState.activeTripModel;
-    // CHANGED: removed isActive local variable since it was unused (line 379 warning)
-    // tripActive combines both checks in one place
-    final tripActive =
-        tripState.screenState == TripScreenState.active && trip != null;
+    final isActive = tripState.screenState == TripScreenState.active;
+    final tripActive = isActive && trip != null;
 
-    // CHANGED: explicit null check instead of ?. operator (fixes lines 24,27,39,40 warnings)
-    final busNumber = trip == null ? 'BA 2 KHA 4521' : trip.busNumber;
-    final routeName = trip == null ? 'Baneshwor → Koteshwor' : trip.routeName;
+    // CHANGED: explicit null check instead of ?. operator
+    // final busNumber = trip == null ? 'BA 2 KHA 4521' : trip.busNumber;
+    // final routeName = trip == null ? 'Baneshwor → Koteshwor' : trip.routeName;
     final totalStops = trip == null ? 0 : trip.stops.length;
-    final completedStops = tripActive ? tripState.currentStopIndex : 0;
+    final completedStops = isActive ? tripState.currentStopIndex : 0;
 
-    // CHANGED: fully null-safe next stop name
-    final nextStopName =
-        (tripActive && tripState.currentStopIndex < trip!.stops.length)
-        ? trip.stops[tripState.currentStopIndex].stopName
-        : 'No active trip';
+    // final nextStopName =
+    //     (tripActive && tripState.currentStopIndex < (trip?.stops.length ?? 0))
+    //     ? trip!.stops[tripState.currentStopIndex].stopName
+    //     : 'No active trip';
+    final nextStopEta = tripActive ? '- min' : '-';
 
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
+            // Instrument bar always visible, never scrolls 
             _InstrumentBar(
-              driverName: driverName,
-              busNumber: busNumber,
-              routeName: routeName,
               isActive: tripActive,
               scheme: scheme,
+              busNumber: '',
+              routeName: '',
+              driverName: '',
             ),
+
+            //scrobale content below
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16),
                 child: Column(
                   children: [
+                    // Next stop card
                     _NextStopCard(
-                      stopName: nextStopName,
-                      eta: tripActive ? '— min' : '—',
                       scheme: scheme,
+
+                      eta: nextStopEta,
+                      stopName: 'Baneshwor',
                     ),
                     const SizedBox(height: 12),
+
+                    // Progress ring + student list
                     _ProgressRingSection(
-                      // CHANGED: guard against division by zero
                       completed: completedStops,
                       total: totalStops > 0 ? totalStops : 1,
                       scheme: scheme,
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
+
+                    // Student list
                     _StudentListCard(scheme: scheme, tripState: tripState),
                   ],
                 ),
@@ -95,9 +97,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Instrument bar — unchanged from before, just receives computed values
-// ─────────────────────────────────────────────────────────────────────────────
+// Instrument bar//
 class _InstrumentBar extends StatelessWidget {
   final String driverName;
   final String busNumber;
@@ -106,25 +106,24 @@ class _InstrumentBar extends StatelessWidget {
   final ColorScheme scheme;
 
   const _InstrumentBar({
-    required this.driverName,
     required this.busNumber,
     required this.routeName,
     required this.isActive,
     required this.scheme,
+    required this.driverName,
   });
-
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isActive
               ? scheme.primary.withValues(alpha: 0.3)
-              : scheme.outline.withValues(alpha: 0.2),
+              : scheme.primary.withValues(alpha: 0.2),
         ),
       ),
       child: Column(
@@ -132,6 +131,7 @@ class _InstrumentBar extends StatelessWidget {
         children: [
           Row(
             children: [
+              //Active indicator dot
               Container(
                 width: 8,
                 height: 8,
@@ -148,17 +148,18 @@ class _InstrumentBar extends StatelessWidget {
                       : null,
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(height: 8),
               Text(
                 isActive ? 'TRIP ACTIVE' : 'NO ACTIVE TRIP',
                 style: AppTypography.mono(
                   color: isActive
                       ? scheme.primary
-                      : scheme.onSurface.withValues(alpha: 0.4),
+                      : scheme.onSurface.withValues(alpha: 0.5),
                   size: 11,
                 ),
               ),
-              const Spacer(),
+              Spacer(),
+
               Text(
                 driverName,
                 style: AppTypography.mono(
@@ -166,9 +167,16 @@ class _InstrumentBar extends StatelessWidget {
                   size: 11,
                 ),
               ),
+              Text(
+                TimeOfDay.now().format(context),
+                style: AppTypography.mono(
+                  color: scheme.onSurface.withValues(alpha: 0.4),
+                  size: 11,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Text(
             busNumber,
             style: AppTypography.display(color: scheme.onSurface, size: 24),
@@ -181,7 +189,7 @@ class _InstrumentBar extends StatelessWidget {
               size: 12,
             ),
           ),
-          // Alert button
+          // Add this at the end of the instrument bar's column, after the route name
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
@@ -214,24 +222,21 @@ class _InstrumentBar extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Next stop card — now receives dynamic values
-// ─────────────────────────────────────────────────────────────────────────────
+//Next stop card
 class _NextStopCard extends StatelessWidget {
-  final String stopName;
   final String eta;
+  final String stopName;
   final ColorScheme scheme;
-
   const _NextStopCard({
-    required this.stopName,
-    required this.eta,
     required this.scheme,
+    required this.eta,
+    required this.stopName,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: scheme.surface,
         borderRadius: BorderRadius.circular(14),
@@ -243,13 +248,13 @@ class _NextStopCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'NEXT STOP',
+                  'Next Stop',
                   style: AppTypography.mono(
                     color: scheme.onSurface.withValues(alpha: 0.4),
                     size: 10,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   stopName,
                   style: AppTypography.heading(
@@ -270,26 +275,22 @@ class _NextStopCard extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Progress ring section — unchanged
-// ─────────────────────────────────────────────────────────────────────────────
+//Progress ring section
+
 class _ProgressRingSection extends StatelessWidget {
   final int completed;
   final int total;
   final ColorScheme scheme;
-
   const _ProgressRingSection({
     required this.completed,
     required this.total,
     required this.scheme,
   });
-
   @override
   Widget build(BuildContext context) {
     final progress = total > 0 ? completed / total : 0.0;
-
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: scheme.surface,
         borderRadius: BorderRadius.circular(14),
@@ -303,7 +304,7 @@ class _ProgressRingSection extends StatelessWidget {
               alignment: Alignment.center,
               children: [
                 CustomPaint(
-                  size: const Size(120, 120),
+                  size: Size(120, 120),
                   painter: _RingPainter(
                     progress: progress,
                     ringColor: scheme.primary,
@@ -315,10 +316,10 @@ class _ProgressRingSection extends StatelessWidget {
                   children: [
                     Icon(
                       Icons.directions_bus_filled_rounded,
-                      color: scheme.primary,
                       size: 26,
+                      color: scheme.primary,
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 4),
                     Text(
                       '$completed/$total',
                       style: AppTypography.mono(
@@ -331,14 +332,6 @@ class _ProgressRingSection extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            '$completed of $total stops complete',
-            style: AppTypography.body(
-              color: scheme.onSurface.withValues(alpha: 0.7),
-              size: 13,
-            ),
-          ),
         ],
       ),
     );
@@ -349,20 +342,19 @@ class _RingPainter extends CustomPainter {
   final double progress;
   final Color ringColor;
   final Color trackColor;
-
   _RingPainter({
     required this.progress,
     required this.ringColor,
     required this.trackColor,
   });
-
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width - 12) / 2;
+    final center = Offset(size.width / 2, size.width / 2);
+    final radius = (size.width - 12 / 2);
     const strokeWidth = 7.0;
     const startAngle = -pi / 2;
 
+    //track background circle
     final trackPaint = Paint()
       ..color = trackColor
       ..strokeWidth = strokeWidth
@@ -393,24 +385,20 @@ class _RingPainter extends CustomPainter {
       oldDelegate.progress != progress || oldDelegate.ringColor != ringColor;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Student list card — fully null-safe, handles no active trip gracefully
-// ─────────────────────────────────────────────────────────────────────────────
+// studentListCard
 class _StudentListCard extends StatelessWidget {
   final ColorScheme scheme;
   final TripStateModel tripState;
-
   const _StudentListCard({required this.scheme, required this.tripState});
 
   @override
   Widget build(BuildContext context) {
     final trip = tripState.activeTripModel;
-    final isActive = tripState.screenState == TripScreenState.active;
+    //final isActive = tripState.screenState == TripScreenState.active;
 
-    // CHANGED: guard — show idle state when no active trip
-    if (trip == null || !isActive) {
+    if (trip == null) {
       return Container(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: scheme.surface,
           borderRadius: BorderRadius.circular(14),
@@ -422,7 +410,7 @@ class _StudentListCard extends StatelessWidget {
               size: 36,
               color: scheme.onSurface.withValues(alpha: 0.2),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Text(
               'No active trip',
               style: AppTypography.heading(
@@ -430,12 +418,12 @@ class _StudentListCard extends StatelessWidget {
                 size: 14,
               ),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: 12),
             Text(
               'Go to the Trip tab to start your route',
               style: AppTypography.caption(
                 color: scheme.onSurface.withValues(alpha: 0.3),
-                size: 12,
+                size: 13,
               ),
               textAlign: TextAlign.center,
             ),
@@ -443,13 +431,13 @@ class _StudentListCard extends StatelessWidget {
         ),
       );
     }
-
-    // CHANGED: separate bounds check before accessing stops[index]
     final stops = trip.stops;
     final index = tripState.currentStopIndex;
-    if (index >= stops.length) return const SizedBox.shrink();
 
-    final currentStop = stops[index]; // ✅ non-nullable from here on
+    final currentStop = stops[index];
+    if (index >= stops.length) {
+      SizedBox.shrink();
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -460,7 +448,7 @@ class _StudentListCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 10),
             child: Text(
               'At ${currentStop.stopName}',
               style: AppTypography.heading(
@@ -473,7 +461,6 @@ class _StudentListCard extends StatelessWidget {
             final i = entry.key;
             final student = entry.value;
             final isLast = i == currentStop.students.length - 1;
-
             Color statusColor;
             IconData statusIcon;
             switch (student.attendance) {
@@ -489,9 +476,8 @@ class _StudentListCard extends StatelessWidget {
                 statusColor = scheme.outline;
                 statusIcon = Icons.radio_button_unchecked;
             }
-
             return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 border: isLast
                     ? null
