@@ -24,6 +24,7 @@ class AppColors {
   static const Color borderDark = Color(0xFF2A3142);
 
   // ---- Surfaces — light mode ----
+  static const Color scheme =Color(0xFF191911);
   static const Color bgLight = Color(0xFFEDEFF3);
   static const Color surfaceLight = Color(0xFFFFFFFF);
   static const Color surfaceVariantLight = Color(0xFFEDEFF3);
