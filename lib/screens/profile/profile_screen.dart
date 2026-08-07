@@ -1,9 +1,12 @@
-
-import 'package:driver_app_saferide/core/theme/theme_provider.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
+import 'edit_profile_screen.dart';
+import 'change_password_screen.dart';
+import 'help_support_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -22,11 +25,27 @@ class ProfileScreen extends ConsumerWidget {
           'Profile',
           style: AppTypography.heading(color: scheme.onSurface),
         ),
+        actions: [
+          // Edit profile button in AppBar
+          TextButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+              );
+            },
+            icon: Icon(Icons.edit_outlined, size: 16, color: scheme.primary),
+            label: Text(
+              'Edit',
+              style: AppTypography.body(color: scheme.primary, size: 14),
+            ),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          // Driver info card
+          // ── Driver info card ──
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
@@ -35,23 +54,45 @@ class ProfileScreen extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: scheme.primary.withValues(alpha: 0.12),
-                  ),
-                  child: Center(
-                    child: Text(
-                      driver != null && driver.name.isNotEmpty
-                          ? driver.name[0].toUpperCase()
-                          : 'D',
-                      style: AppTypography.display(
-                        color: scheme.primary,
-                        size: 22,
+                // Photo or avatar
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const EditProfileScreen(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: scheme.primary.withValues(alpha: 0.12),
+                      border: Border.all(
+                        color: scheme.primary.withValues(alpha: 0.3),
+                        width: 2,
                       ),
                     ),
+                    child: driver?.photoPath != null
+                        ? ClipOval(
+                            child: Image.file(
+                              File(driver!.photoPath!),
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Center(
+                            child: Text(
+                              driver != null && driver.name.isNotEmpty
+                                  ? driver.name[0].toUpperCase()
+                                  : 'D',
+                              style: AppTypography.display(
+                                color: scheme.primary,
+                                size: 22,
+                              ),
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -70,7 +111,18 @@ class ProfileScreen extends ConsumerWidget {
                           color: scheme.onSurface.withValues(alpha: 0.5),
                         ),
                       ),
-                      const SizedBox(height: 3),
+                      if (driver?.email != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          driver!.email!,
+                          style: AppTypography.caption(
+                            color: scheme.onSurface.withValues(alpha: 0.4),
+                            size: 11,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 6),
+                      // License badge
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -97,7 +149,7 @@ class ProfileScreen extends ConsumerWidget {
 
           const SizedBox(height: 24),
 
-          // Theme section
+          // ── Appearance ──
           _SectionLabel('Appearance', scheme: scheme),
           const SizedBox(height: 10),
           Container(
@@ -142,8 +194,8 @@ class ProfileScreen extends ConsumerWidget {
 
           const SizedBox(height: 24),
 
-          // Settings section
-          _SectionLabel('Settings', scheme: scheme),
+          // ── Account settings ──
+          _SectionLabel('Account', scheme: scheme),
           const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(
@@ -153,26 +205,41 @@ class ProfileScreen extends ConsumerWidget {
             child: Column(
               children: [
                 _SettingsTile(
-                  icon: Icons.notifications_outlined,
-                  title: 'Notification preferences',
+                  icon: Icons.person_outline,
+                  title: 'Edit profile',
                   scheme: scheme,
                   showChevron: true,
-                  onTap: () {},
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const EditProfileScreen(),
+                    ),
+                  ),
                 ),
                 _SettingsTile(
                   icon: Icons.lock_outline,
                   title: 'Change password',
                   scheme: scheme,
                   showChevron: true,
-                  onTap: () {},
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ChangePasswordScreen(),
+                    ),
+                  ),
                 ),
                 _SettingsTile(
                   icon: Icons.help_outline,
                   title: 'Help & support',
                   scheme: scheme,
-                  isLast: true,
                   showChevron: true,
-                  onTap: () {},
+                  isLast: true,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const HelpSupportScreen(),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -180,7 +247,7 @@ class ProfileScreen extends ConsumerWidget {
 
           const SizedBox(height: 24),
 
-          // Logout button
+          // ── Logout ──
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -199,6 +266,8 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
           ),
+
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -248,7 +317,6 @@ class ProfileScreen extends ConsumerWidget {
 class _SectionLabel extends StatelessWidget {
   final String text;
   final ColorScheme scheme;
-
   const _SectionLabel(this.text, {required this.scheme});
 
   @override
