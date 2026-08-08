@@ -42,6 +42,10 @@ class TripNotifier extends StateNotifier<TripStateModel> {
       );
     }
   }
+  void goToPreviousStop() {
+    if (state.currentStopIndex <= 0) return; // already at first stop
+    state = state.copyWith(currentStopIndex: state.currentStopIndex - 1);
+  }
 
   Future<void> endTrip() async {
     if (state.activeTripModel == null) return;

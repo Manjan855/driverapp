@@ -154,31 +154,102 @@ class TripBody extends ConsumerWidget {
                   const SizedBox(height: 12),
 
                   // Advance to next stop button
-                  if (tripState.currentStopIndex < trip.stops.length - 1)
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          ref.read(tripProvider.notifier).advanceToNextStop();
-                        },
-                        icon: Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 18,
-                          color: scheme.primary,
-                        ),
-                        label: Text(
-                          'Next stop: ${trip.stops[tripState.currentStopIndex + 1].stopName}',
-                          style: AppTypography.body(color: scheme.primary),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: BorderSide(color: scheme.primary),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                  Row(
+                    children: [
+                      // ← Previous stop button (only show if not at first stop)
+                      if (tripState.currentStopIndex > 0) ...[
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              ref
+                                  .read(tripProvider.notifier)
+                                  .goToPreviousStop();
+                            },
+                            icon: Icon(
+                              Icons.arrow_back_rounded,
+                              size: 18,
+                              color: scheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                            label: Text(
+                              trip
+                                  .stops[tripState.currentStopIndex - 1]
+                                  .stopName,
+                              style: AppTypography.body(
+                                color: scheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: BorderSide(
+                                color: scheme.outline.withValues(alpha: 0.4),
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
+                        const SizedBox(width: 10),
+                      ],
+
+                      // → Next stop button (only show if not at last stop)
+                      if (tripState.currentStopIndex < trip.stops.length - 1)
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              ref
+                                  .read(tripProvider.notifier)
+                                  .advanceToNextStop();
+                            },
+                            icon: Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 18,
+                              color: scheme.primary,
+                            ),
+                            label: Text(
+                              trip
+                                  .stops[tripState.currentStopIndex + 1]
+                                  .stopName,
+                              style: AppTypography.body(color: scheme.primary),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: BorderSide(color: scheme.primary),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  // if (tripState.currentStopIndex < trip.stops.length - 1)
+                  //   SizedBox(
+                  //     width: double.infinity,
+                  //     child: OutlinedButton.icon(
+                  //       onPressed: () {
+                  //         ref.read(tripProvider.notifier).advanceToNextStop();
+                  //       },
+                  //       icon: Icon(
+                  //         Icons.arrow_forward_rounded,
+                  //         size: 18,
+                  //         color: scheme.primary,
+                  //       ),
+                  //       label: Text(
+                  //         'Next stop: ${trip.stops[tripState.currentStopIndex + 1].stopName}',
+                  //         style: AppTypography.body(color: scheme.primary),
+                  //       ),
+                  //       style: OutlinedButton.styleFrom(
+                  //         padding: const EdgeInsets.symmetric(vertical: 14),
+                  //         side: BorderSide(color: scheme.primary),
+                  //         shape: RoundedRectangleBorder(
+                  //           borderRadius: BorderRadius.circular(12),
+                  //         ),
+                  //       ),
+                  //     ),
+                  //   ),
 
                   // Stop list overview
                   const SizedBox(height: 12),
