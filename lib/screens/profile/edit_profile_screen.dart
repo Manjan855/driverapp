@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:driver_app_saferide/data/services/driver_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -126,38 +127,57 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
-  Future<void> _saveChanges() async {
+ Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-
     setState(() => _isSaving = true);
 
-    final driver = ref.read(authProvider).driver;
-    if (driver == null) return;
+    try {
+      final driver = ref.read(authProvider).driver;
+      if (driver == null) return;
 
-    final updated = driver.copyWith(
-      name: _nameController.text.trim(),
-      email: _emailController.text.trim().isEmpty
-          ? null
-          : _emailController.text.trim(),
-      photoPath: _photoPath,
-    );
+      final driverService = DriverService();
 
-    await ref.read(authProvider.notifier).updateDriver(updated);
+      // Update on backend
+      final updatedDriver = await driverService.updateProfile(
+        driverId: driver.id,
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim().isEmpty
+            ? null
+            : _emailController.text.trim(),
+      );
 
-    if (!mounted) return;
-    setState(() => _isSaving = false);
+      // Update local state with response + keep photo path (local only)
+      final withPhoto = updatedDriver.copyWith(photoPath: _photoPath);
+      await ref.read(authProvider.notifier).updateDriver(withPhoto);
 
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(
-        content: const Text('Profile updated successfully'),
-        backgroundColor: Theme.of(context).colorScheme.secondary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-
-    Navigator.pop(context);
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          content: const Text('Profile updated successfully'),
+          backgroundColor: Theme.of(context).colorScheme.secondary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override

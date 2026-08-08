@@ -1,11 +1,15 @@
+import 'package:driver_app_saferide/core/constants/app_config.dart';
 import 'package:driver_app_saferide/core/router/app_router.dart';
 import 'package:driver_app_saferide/core/theme/app_theme.dart';
 import 'package:driver_app_saferide/core/theme/theme_provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-void main() {
-  
+void main()async {
+   WidgetsFlutterBinding.ensureInitialized();
+   AppConfig.validate();
+   await Firebase.initializeApp();
    
   runApp(const ProviderScope(child: DriverApp(),));
 }

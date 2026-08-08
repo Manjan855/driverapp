@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:driver_app_saferide/data/models/trip_model.dart';
 import 'package:driver_app_saferide/data/models/trip_state_model.dart';
+import 'package:driver_app_saferide/data/services/driver_socket_service.dart';
 import 'package:driver_app_saferide/data/services/gps_service.dart';
 import 'package:driver_app_saferide/data/services/trip_service.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -10,6 +11,7 @@ class TripNotifier extends StateNotifier<TripStateModel> {
   final TripService _tripService;
   final GpsService _gpsService;
   StreamSubscription? _gpsSubscription;
+  final DriverSocketService _socketService = DriverSocketService();
   TripNotifier(this._tripService, this._gpsService)
     : super(TripStateModel.idle());
 
@@ -25,11 +27,38 @@ class TripNotifier extends StateNotifier<TripStateModel> {
     }
   }
 
-  Future<void> startTrip() async {
+  // Future<void> startTrip() async {
+  //   if (state.activeTripModel == null) return;
+  //   state = state.copyWith(screenState: TripScreenState.starting);
+  //   try {
+  //     await _tripService.startTrip(state.activeTripModel!.id);
+  //     _startGpsBroadcast();
+  //     state = state.copyWith(
+  //       screenState: TripScreenState.active,
+  //       isGpsBroadcasting: true,
+  //     );
+  //   } catch (e) {
+  //     state = state.copyWith(
+  //       screenState: TripScreenState.idle,
+  //       errorMessage: 'Failed to start Trip',
+  //     );
+  //   }
+  // }
+   Future<void> startTrip() async {
     if (state.activeTripModel == null) return;
     state = state.copyWith(screenState: TripScreenState.starting);
+
     try {
       await _tripService.startTrip(state.activeTripModel!.id);
+
+      // Connect socket when trip starts
+      _socketService.connect(
+        tripId: state.activeTripModel!.id,
+        driverId: 1, // replace with real driver ID from auth
+        onConnect: () => print('🟢 Driver broadcasting live'),
+        onError: (e) => print('🔴 Socket error: $e'),
+      );
+
       _startGpsBroadcast();
       state = state.copyWith(
         screenState: TripScreenState.active,
@@ -38,7 +67,7 @@ class TripNotifier extends StateNotifier<TripStateModel> {
     } catch (e) {
       state = state.copyWith(
         screenState: TripScreenState.idle,
-        errorMessage: 'Failed to start Trip',
+        errorMessage: 'Failed to start trip',
       );
     }
   }
@@ -47,12 +76,31 @@ class TripNotifier extends StateNotifier<TripStateModel> {
     state = state.copyWith(currentStopIndex: state.currentStopIndex - 1);
   }
 
+  // Future<void> endTrip() async {
+  //   if (state.activeTripModel == null) return;
+  //   state = state.copyWith(screenState: TripScreenState.ending);
+  //   try {
+  //     await _tripService.endTrip(state.activeTripModel!.id);
+  //     _stopGpsBroadcast();
+  //     state = state.copyWith(
+  //       screenState: TripScreenState.idle,
+  //       isGpsBroadcasting: false,
+  //     );
+  //   } catch (e) {
+  //     state = state.copyWith(
+  //       screenState: TripScreenState.active,
+  //       errorMessage: 'Failed to end Trip',
+  //     );
+  //   }
+  // }
   Future<void> endTrip() async {
     if (state.activeTripModel == null) return;
     state = state.copyWith(screenState: TripScreenState.ending);
+
     try {
       await _tripService.endTrip(state.activeTripModel!.id);
       _stopGpsBroadcast();
+      _socketService.disconnect(); // ← disconnect socket on trip end
       state = state.copyWith(
         screenState: TripScreenState.idle,
         isGpsBroadcasting: false,
@@ -60,9 +108,26 @@ class TripNotifier extends StateNotifier<TripStateModel> {
     } catch (e) {
       state = state.copyWith(
         screenState: TripScreenState.active,
-        errorMessage: 'Failed to end Trip',
+        errorMessage: 'Failed to end trip',
       );
     }
+  }
+  void _startGpsBroadcast() {
+    _gpsSubscription = _gpsService.positionStream.listen((position) {
+      state = state.copyWith(
+        currentLat: position.latitude,
+        currentLng: position.longitude,
+      );
+
+      // REAL broadcast via socket instead of print
+      if (state.activeTripModel != null) {
+        _socketService.broadcastLocation(
+          tripId: state.activeTripModel!.id,
+          lat: position.latitude,
+          lng: position.longitude,
+        );
+      }
+    });
   }
 
   Future<void> markStudent({
@@ -71,6 +136,7 @@ class TripNotifier extends StateNotifier<TripStateModel> {
   }) async {
     final trip = state.activeTripModel;
     if (trip == null) return;
+    final eventType = status == AttendanceStatus.boarded ? 'boarded' : 'absent';
     final currentStop = trip.stops[state.currentStopIndex];
     // Update local state immediately — optimistic update
 
@@ -103,6 +169,12 @@ class TripNotifier extends StateNotifier<TripStateModel> {
         stops: updatedStops,
       ),
     );
+     _socketService.emitStudentEvent(
+      tripId: trip.id,
+      studentId: studentId,
+      eventType: eventType,
+      stopName: currentStop.stopName,
+    );
     //send to backend
     await _tripService.markAttendance(
       tripId: trip.id,
@@ -120,21 +192,21 @@ class TripNotifier extends StateNotifier<TripStateModel> {
     state = state.copyWith(currentStopIndex: nextIndex);
   }
 
-  void _startGpsBroadcast() {
-    _gpsSubscription = _gpsService.positionStream.listen((position) {
-      state = state.copyWith(
-        currentLat: position.latitude,
-        currentLng: position.longitude,
-      );
-      if (state.activeTripModel != null) {
-        _tripService.broadcastLocation(
-          tripId: state.activeTripModel!.id,
-          lat: position.latitude,
-          lng: position.longitude,
-        );
-      }
-    });
-  }
+  // void _startGpsBroadcast() {
+  //   _gpsSubscription = _gpsService.positionStream.listen((position) {
+  //     state = state.copyWith(
+  //       currentLat: position.latitude,
+  //       currentLng: position.longitude,
+  //     );
+  //     if (state.activeTripModel != null) {
+  //       _tripService.broadcastLocation(
+  //         tripId: state.activeTripModel!.id,
+  //         lat: position.latitude,
+  //         lng: position.longitude,
+  //       );
+  //     }
+  //   });
+  // }
 
   void _stopGpsBroadcast() {
     _gpsSubscription?.cancel();
@@ -143,7 +215,8 @@ class TripNotifier extends StateNotifier<TripStateModel> {
 
   @override
   void dispose() {
-    _startGpsBroadcast();
+    _stopGpsBroadcast();
+    _socketService.disconnect();
     super.dispose();
   }
 }

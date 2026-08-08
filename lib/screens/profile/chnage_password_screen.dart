@@ -1,3 +1,5 @@
+import 'package:driver_app_saferide/data/services/driver_service.dart';
+import 'package:driver_app_saferide/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_typography.dart';
@@ -31,26 +33,46 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-
     setState(() => _isSaving = true);
-    await Future.delayed(const Duration(milliseconds: 800));
-    // Real: PUT /drivers/change-password with currentPassword + newPassword
-    setState(() => _isSaving = false);
 
-    if (!mounted) return;
+    try {
+      final driver = ref.read(authProvider).driver;
+      if (driver == null) return;
 
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(
-        content: const Text('Password changed successfully'),
-        backgroundColor: Theme.of(context).colorScheme.secondary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+      await DriverService().changePassword(
+        driverId: driver.id,
+        currentPassword: _currentController.text,
+        newPassword: _newController.text,
+      );
 
-    Navigator.pop(context);
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          content: const Text('Password changed successfully'),
+          backgroundColor: Theme.of(context).colorScheme.secondary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
-
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;

@@ -1,25 +1,46 @@
-import 'package:driver_app_saferide/data/models/alert_model.dart';
+// import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
+
+import '../models/alert_model.dart';
+import 'api_client.dart';
 
 class AlertService {
+  final ApiClient _apiClient = ApiClient();
+
+  /// POST /api/notifications/alert
   Future<void> sendAlert({
     required AlertType type,
     required String message,
     required int tripId,
   }) async {
-    await Future.delayed(Duration(milliseconds: 300));
-    // Real: POST /trips/:id/alerts  +  FCM broadcast to all parents
-    // print("Alert sent: ${type.name} - $message");
+    try {
+      await _apiClient.dio.post(
+        '/notifications/alert',
+        data: {
+          'tripId': tripId,
+          'eventType': _alertTypeToString(type),
+          'message': message,
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+    } on DioException catch (e) {
+      final msg = e.response?.data?['message'] ?? 'Failed to send alert';
+      throw Exception(msg);
+    }
   }
 
-  Future<List<AlertModel>> getsentAlert(int tripId) async {
-    await Future.delayed(Duration(milliseconds: 300));
-    return [
-      AlertModel(
-        type: AlertType.delay,
-        message: 'Heavy traffic near Tinkune. Expecting 15 minute delay.',
-        sentAt: DateTime.now().subtract(Duration(minutes: 12)),
-        tripId: tripId,
-      ),
-    ];
+  String _alertTypeToString(AlertType type) {
+    switch (type) {
+      case AlertType.delay:
+        return 'delay';
+      case AlertType.emergency:
+        return 'emergency';
+      case AlertType.routeChange:
+        return 'route_change';
+      case AlertType.tripStarted:
+        return 'trip_started';
+      case AlertType.tripEnded:
+        return 'trip_ended';
+    }
   }
 }
