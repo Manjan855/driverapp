@@ -37,6 +37,10 @@ class AuthNotifier extends StateNotifier<AuthStateModel> {
       state = AuthStateModel.unauthenticated();
     }
   }
+  Future<void> updateDriver(DriverModel updated) async {
+    await _storage.saveDriverData(jsonEncode(updated.toJson()));
+    state = AuthStateModel.authenticated(updated);
+  }
 
   Future<void> login({
     required String phoneNumber,

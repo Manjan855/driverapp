@@ -1,11 +1,12 @@
 import 'dart:io';
+import 'package:driver_app_saferide/core/theme/theme_provider.dart';
+import 'package:driver_app_saferide/screens/profile/chnage_password_screen.dart';
+import 'package:driver_app_saferide/screens/profile/edit_profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/theme_provider.dart';
-import 'edit_profile_screen.dart';
-import 'change_password_screen.dart';
+
 import 'help_support_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
